@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+<script type='text/javascript'>
+var URL = 'note/';
+var bookURL = URL + 'quiz'
+var imgURL = 'noteIMG/'
+var AnswerCount = 6; //AT LEAST 4...
+$(document).ready(function() {
+	$.get(bookURL, function(data) { //load list of quizes from 'note/quiz'
+		data = data.split("#");
+		var bookContents = data[1].split("\n");
+		for (c = 1; c < (bookContents.length-1); c++) {
+			bookContents[c] = bookContents[c].split(",");
+		}
+		var bookContentsLen = (bookContents.length - 2);
+		for (x = 1; x <= bookContentsLen; x++) {
+				$("#SelectBookContents").append('<option value="' + bookContents[x][1] + ',' + bookContents[x][0] + '">' + bookContents[x][0] + '</option>');
+		}
+		function LOADquiz(bookActiveLink, bookActiveTitle) { //load active quiz
+			$("#DivCounterCorrect").empty().append("0");
+			$("#DivCounterIncorrect").empty().append("0");
+			$("#DivCounterOutput").empty().append("0/0");
+			$.get((URL + bookActiveLink), function(data) {
+				$("#DivQuizLink a").attr('href',(URL + bookActiveLink));
+				data = data.split("#");
+				var quizContents = data[1].split("\n");
+				for (c = 1; c < (quizContents.length-1); c++) { 
+					quizContents[c] = quizContents[c].split(",");
+				}
+				var quizContentsLen = (quizContents.length - 2);
+				var used = [];
+				function shuffle() { //get questions + answers and append, repeat each time an answer is clicked
+					$('.allQuizDivs').empty();	
+					var answerARR = [];
+					answerARR.length = 0;
+					//PICK RANDOM QUESTION + SHUFFLE ANSWERS
+					do {
+						function randomInt(min, max){ return Math.floor(Math.random() * (max - min + 1) + min); }
+						var answerARRlen = answerARR.length;
+						switch (answerARRlen) {
+							case 0 : // if loading new question
+								if (used.length == quizContentsLen) {  // if all questions have been used reset quiz
+									used.length = 0;
+									alert('end of questions... restarting.');
+								} else { //pick random question
+									var rInt = randomInt(1,quizContentsLen); 
+									if ($.inArray(rInt.toString(), used) == -1) { // if question has not been used
+										answerARR.push(rInt);
+										used.push(rInt.toString());
+									}
+								}
+								break;
+							case 1 : //determine quiz type and append to answerARR[1]
+								var qtypevar = (quizContents[(answerARR[0])][0]).slice(0,1);
+								if (qtypevar == "!") { // true false
+									answerARR.push("10000");
+								} else if (qtypevar == "$") { // image number match range
+									answerARR.push("11000");
+								} else { //multiple choice
+									answerARR.push("12000");
+								}
+								break;
+							default:
+								var qtypecode = answerARR[1]
+								switch (qtypecode) {
+									case '10000' : //push true or false depending on first value
+										if (answerARR.length < 3) {
+											var TorF = (quizContents[(answerARR[0])][1]);
+											if (TorF == "True" || TorF ==  "true") {
+												answerARR.push("10002"); //push false
+											} else if (TorF == "False" || TorF ==  "false") {
+												answerARR.push("10001"); //push true
+											}
+										} else {
+											answerARR.push("10003"); //push null
+										}
+										break;
+									case '11000' : //find range from (quizContents[(answerARR[0])][2]) from 1 - X
+										var range = parseInt(quizContents[(answerARR[0])][3]);
+										if (range < AnswerCount) { range = AnswerCount; }
+										var rInt = (Math.floor(Math.random()*range)+1);
+										if ($.inArray(rInt, answerARR) == -1) { // if answer has not been used yet
+											answerARR.push(rInt);
+										}
+										break;
+									case '12000' :
+										var rInt = randomInt(1,quizContentsLen);
+										var rIntprep = (quizContents[rInt][0]).slice(0,1);
+										if (rIntprep != "!" && rIntprep != "$") { //if question is not a non-MC question
+											if ($.inArray(rInt, answerARR) == -1) { // if answer has not been used yet
+												answerARR.push(rInt);
+											}
+										}
+										break;
+								}
+						}
+					} while (answerARR.length < (AnswerCount + 1));
+					//SET HTML QUESTION TITLE
+					var prepAnswer = (quizContents[(answerARR[0])][0]).slice(0,1);
+					switch (prepAnswer) {
+						case '!' : //TrueFalse
+							var fixedAnswer = (quizContents[(answerARR[0])][0]).substring(1);
+							if (fixedAnswer.slice(0,1) == "/") { //check if question is image or text and append question and answers
+								$("#DivQuizTitle").append('<img class="qimg" src="' + imgURL + bookActiveLink + fixedAnswer + '">'); 
+							} else {
+								$("#DivQuizTitle").append("<b>" + fixedAnswer + "</b>"); 
+							}
+							break;
+						case '$' : //Range 1-X
+							var fixedAnswer = (quizContents[(answerARR[0])][0]).substring(1);
+							if (fixedAnswer.slice(0,1) == "/") {
+								$("#DivQuizTitle").append('<img class="qimg" src="' + imgURL + bookActiveLink + fixedAnswer + '"<br><b>' + (quizContents[(answerARR[0])][1]) + '</b>'); 
+							} else {
+								$("#DivQuizTitle").append("<b>" + fixedAnswer + "<br>" + (quizContents[(answerARR[0])][1]) + "</b>"); 
+							}
+							break;
+						default: //MultipleChoice
+							var fixedAnswer = (quizContents[(answerARR[0])][0]);
+							if (fixedAnswer.slice(0,1) == "/") {
+								$("#DivQuizTitle").append('<img class="qimg" src="' + imgURL + bookActiveLink + fixedAnswer + '">'); 
+							} else {
+								$("#DivQuizTitle").append("<b>" + fixedAnswer + "</b>"); 
+							}
+					}
+					//SET HTML QUESTION ANSWERS
+					let shuffled = answerARR
+						.map(value => ({ value, sort: Math.random() }))
+						.sort((a, b) => a.sort - b.sort)
+						.map(({ value }) => value)
+					var inum = ["A)","B)","C)","D)","E)","F)"]
+					var qtypecode = answerARR[1]
+					switch (qtypecode) {
+						case '10000' : //TrueFalse
+							shuffled.splice($.inArray("10000", shuffled), 1);
+							for (i = 0; i < AnswerCount; i++) {
+								if (shuffled[i] == answerARR[0]) {
+									$("#DivQuizQuestions").append('<div class="right box">' + quizContents[(shuffled[i])][1] + "<\div>");
+								} else if (shuffled[i] == "10001") {
+									$("#DivQuizQuestions").append('<div class="wrong box">True<\div>');
+								} else if (shuffled[i] == "10002") {
+									$("#DivQuizQuestions").append('<div class="wrong box">False<\div>');
+								} else {
+								}
+							}	
+							break;
+						case '11000' : //Range 1-X
+							shuffled.splice($.inArray("11000", shuffled), 1);
+							for (i = 0; i < AnswerCount; i++) {
+								if (shuffled[i] == answerARR[0]) {
+									$("#DivQuizQuestions").append('<div class="right box">' + inum[i] + " " + quizContents[(shuffled[i])][2] + "<\div>");
+								} else {
+									$("#DivQuizQuestions").append('<div class="wrong box">' + inum[i] + " " + shuffled[i]+ "<\div>");
+								}
+							}
+							break;
+						case '12000' : //MultipleChoice
+							shuffled.splice($.inArray("12000", shuffled), 1);
+							for (i = 0; i < AnswerCount; i++) {
+								if (shuffled[i] == answerARR[0]) {
+									$("#DivQuizQuestions").append('<div class="right box">' + inum[i] + " " + quizContents[(shuffled[i])][1] + "<\div>");
+								} else {
+									$("#DivQuizQuestions").append('<div class="wrong box">' + inum[i] + " " + quizContents[(shuffled[i])][1] + "<\div>");
+								}
+							}
+							break;
+					}
+					//INTERACTION
+					$('.box').click(function() { //click answer
+						var cor = parseInt($("#DivCounterCorrect").text());
+						var wro = parseInt($("#DivCounterIncorrect").text());
+						if ($(this).hasClass("right")) {
+							$(this).addClass('rightA').removeClass('right');
+							$('.wrong').addClass('answerItem').removeClass('wrong')
+							$("#DivCounterCorrect").empty().append(cor + 1);
+							$("#DivCounterOutput").empty().append((cor + 1) + "/" + (wro + cor + 1) + " correct out of " + quizContentsLen + " questions.");
+							window.setTimeout( shuffle, 2500); 
+			       		} else if ($(this).hasClass("wrong")) {
+							$(this).addClass('wrongA').removeClass('wrong');
+							$('.wrong').addClass('answerItem').removeClass('wrong')
+							$('.right').addClass('rightA').removeClass('right');
+							$("#DivCounterIncorrect").empty().append(wro + 1);
+							$("#DivCounterOutput").empty().append(cor + "/" + (wro + cor + 1) + " correct out of " + quizContentsLen + " questions.");
+							used.pop();
+							window.setTimeout( shuffle, 4000);
+						} else {
+						}
+					});
+					$("#SelectBookContents").change(function() {
+						var bookActive = $(this).val().split(",");
+						LOADquiz(bookActive[0], bookActive[1]);
+					});
+				}
+				shuffle();
+			});
+		}
+		var bookActive = $("#SelectBookContents").val().split(",");
+		LOADquiz(bookActive[0], bookActive[1]);
+	});
+});
+</script>
+<style>
+	body {font-size:1.2em; color:white; background-color:#2a2a2a;}
+	.wrongA {background-color:red;}
+	.rightA {background-color:green;}
+	.box {border:1px solid black; margin: 10px; padding:5px;}
+	.hidden {display:none;}
+	#DivSelectHolder {float:right; margin:5px; margin-right:10px;}
+	#DivQuizLink {float:right; margin:5px;}
+	#DivBookLink {float:right; margin:5px;}
+	#DivQuizTitle {float;left; margin:10px; max-height:40vh;}
+		.qimg {height:40vh;}
+	#DivCounterOutput {float:left; margin:10px;}
+</style>
+</head>
+<body>
+	<div id="DivSelectHolder" class="title2">
+		<select id="SelectBookContents"></select>
+	</div>
+	<div id="DivBookLink"  class=""><a target="_blank" href="note/quiz">quiz list</a></div>
+	<div id="DivQuizLink" class=""><a target="_blank" href="">edit entries</a></div>
+	<div id="DivCounterOutput" class="t">0/0</div>
+        <div id="DivCounterCorrect" class="l hidden">0</div>
+        <div id="DivCounterIncorrect" class="w hidden">0</div>
+	<br><br><br>
+	<div id="DivQuizTitle" class="title allQuizDivs"></div>
+	<br>
+	<div id="DivQuizQuestions" class="allQuizDivs"></div>
+</body>
+</html>
