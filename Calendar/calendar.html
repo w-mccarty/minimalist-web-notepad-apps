@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+<script type='text/javascript'>
+$(document).ready(function() {
+	var myIP = "XXX.XXX.XXX.XXX"
+	var nonrepeaterString = "http://" + String(myIP) + "/nonrepeating";
+	var repeaterString = "http://" + String(myIP) + "/repeating";
+	var date = new Date();
+	var dateS = new Date().toString().replaceAll(" ",",").split(",");
+	var dated = parseInt(dateS[2]); // todays date
+	var firstDayS = new Date(date.getFullYear(), date.getMonth(), 1).toString().replaceAll(" ",",").split(",");
+	var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	var startadj = weekdays.indexOf(firstDayS[0]); // day number 0-6 of first day of month
+	var lastDayS = new Date(date.getFullYear(), date.getMonth() + 1, 0).toString().replaceAll(" ",",").split(",");
+	var lastdate = parseInt(lastDayS[2]); // last day of month
+	var prevMlastS = new Date(date.getFullYear(), date.getMonth() + 0, 0).toString().replaceAll(" ",",").split(",");
+	var prevMlastSday = parseInt(prevMlastS[2]); // previous month last day
+	Date.prototype.getWeek = function() {
+		var onejan = new Date(this.getFullYear(), 0, 1);
+		return Math.ceil((((this - onejan) / 86400000) + onejan.getDay() ) / 7);
+	}
+	var weekNumber = (new Date()).getWeek();
+	$.get('caltest', function(data) {
+		var fileContents = data;
+		var fileContents = fileContents.split("\n");
+		for (c = 0; c < fileContents.length; c++) { 
+			fileContents[c] = fileContents[c].split(",");
+		}
+		for (i=0; i<(lastdate); i++) {
+			var increaser = (i + startadj + 1);
+			if (increaser < 10) { var dstring = "0"; } else { var dstring = ""; }
+			if (i <= 8) { var istring = "0"; } else { var istring = ""; }
+			var datenum = "#d" + dstring + String(increaser);
+			if ((i+1) == dated) { 
+				$(datenum).addClass('boxtoday'); 
+				$(datenum).html('<div class="txttoday">' + dateS[1] + ' ' + String(i + 1) + ' ' + String(dateS[3]) + '<br>(wk' + String(weekNumber) + ') </div>');
+			} else { 
+				$(datenum).html('<div class="datenumbox">' + (i + 1) + '</div>');
+			}
+			for (j = 0; j < fileContents.length; j++) { // non-repeating items [date, eventstring]
+				if ((fileContents[j][0]) == ( dateS[1] + istring + String(i + 1) + String(dateS[3]))) {
+					$(datenum).append('<a href="' + nonrepeaterString + '" target="_blank"><div class="nonrepValitem">' + fileContents[j][1] + '</div></a>');
+				}
+			}
+		}	
+		for (i=(lastdate + startadj + 1 ); i<43; i++) { //nextmonth day number
+			$( "#d" + String(i) ).html( '<div class="txtoutside">' + (i - (lastdate + startadj)) + '</div>' ).addClass('outmonth');
+		}
+		for (i=0; i<(startadj); i++) { // previousmonth day number
+			$( "#d0" + String(i + 1) ).html( '<div class="txtoutside">'  + ((prevMlastSday - startadj) + i + 1) + '<div>'  ).addClass('outmonth');
+		}
+		$.get('repeater', function(data) { // repeating items
+			var fileContents = data;
+			var fileContents = fileContents.split("\n");
+			for (c = 0; c < fileContents.length; c++) {
+				fileContents[c] = fileContents[c].split(",");
+			}
+			var divweek = parseInt(((startadj + dated) / 7));
+			wnum = [ (weekNumber - divweek), (weekNumber + 1 - divweek), (weekNumber + 2 - divweek), (weekNumber + 3 - divweek), (weekNumber + 4 - divweek), (weekNumber + 5 - divweek)]; 
+			for (m = 0; m < fileContents.length; m++) {
+				var mdays = parseInt(fileContents[m][2]);
+				if (((parseInt(fileContents[m][0])) != 0) || ((parseInt(fileContents[m][1])) != 0)) { // repeating weekly items [startweek,repeat every X weeks, onday (0-6), eventstring]; MUST start with nonzero for first two values
+					for (n = 0; n < 6; n++) {
+						var remainder = ((wnum[n] - parseInt(fileContents[m][0])) % parseInt(fileContents[m][1]));
+						if (remainder == 0) {
+							var dval = ((7 * n) + mdays);
+							if (dval < 10) { var dstring = "0"; } else { var dstring = ""; }
+							var dspot = "#d" + dstring + String(dval + 1);
+							if (((dval + 1) > (startadj + lastdate)) || ((dval) < startadj)) {
+								$(dspot).append('<a href="' + repeaterString + '" target="_blank"><div class="repeatoutsidemonth">' + fileContents[m][3] + '</div></a>');
+							} else {
+								$(dspot).append('<a href="' + repeaterString + '" target="_blank"><div class="repeatweekitem">' + fileContents[m][3] + '</div></a>');
+							}
+						}
+					}
+				} 
+				if (((parseInt(fileContents[m][0])) == 0) && ((parseInt(fileContents[m][1])) == 0)) { // repeating items specific day [daynumber, eventstring] MUST start with 0,0
+					if ((mdays + startadj) < 10) { var dholder = "0"; } else { var dholder = ""; }
+					var datenum = "#d" + dholder + String(mdays + startadj);
+					$(datenum).append('<a href="' +  repeaterString + '" target="_blank"><div class="repeatitem">' + fileContents[m][3] + '</div></a>');
+				}
+			}
+		});
+	});
+});
+</script>
+<style>
+body {background-color: #2a2a2a;}
+a{color:black; text-decoration: none;}
+table {}
+td {width:18.424vw;}
+th {min-width:50px; text-align:center; color:white; background-color:#181818; font-size: 0.75em;}
+.inmonth {}
+.outmonth {background-color:#2a2a2a !important;}
+.txtoutside{text-align:center; font-size: 0.75em; }
+.dname {}
+.dbox {vertical-align:top; background-color:#181818; height:14.28vh;}
+.boxtoday {background-color:#bf7171 !important; color:}
+.txttoday {color:black; text-align:center; margin: 0px 0px 1px 1px; padding: 1px; font-size: 0.75em; overflow: hidden; white-space: nowrap; text-overflow: "-";}
+.datenumbox {color:white; text-align:center; margin: 0px 0px 1px 1px; padding: 1px; font-size: 0.75em; overflow: hidden; white-space: nowrap; text-overflow: "-";}
+.nonrepValitem{display: inline-block; background-color:#85b080; margin: 0px 0px 1px 1px; padding: 1px; font-size: 0.75em; overflow: hidden; white-space: nowrap; text-overflow: "-";}
+.repeatitem{display: inline-block; background-color:#80a3b0; margin: 0px 0px 1px 1px; padding: 1px; font-size: 0.75em; overflow: hidden; white-space: nowrap; text-overflow: "-";}
+.repeatweekitem{display: inline-block; background-color:#b0af80; margin: 0px 0px 1px 1px; padding: 1px; font-size: 0.75em; overflow: hidden; white-space: nowrap; text-overflow: "-"; }
+.repeatoutsidemonth{display: inline-block; margin: 0px 0px 1px 1px; padding: 1px; font-size: 0.75em; overflow: hidden; white-space: nowrap; text-overflow: "-";}
+</style>
+</head>
+<body>
+<table>
+	<thead class='dnamerow'>
+		<th class='dname'>Sun</th><th class='dname'>Mon</th><th class='dname'>Tue</th><th class='dname'>Wed</th><th class='dname'>Thu</th><th class='dname'>Fri</th><th class='dname'>Sat</th>
+	</thead>
+	<tr class='daterow' id='row1'>
+		<td class='dbox' id='d01'></td><td class='dbox' id='d02'></td><td class='dbox' id='d03'></td><td class='dbox' id='d04'></td><td class='dbox' id='d05'></td><td class='dbox' id='d06'></td><td class='dbox' id='d07'></td>
+	</tr>
+	<tr class='daterow' id='row1'>
+		<td class='dbox' id='d08'></td><td class='dbox' id='d09'></td><td class='dbox' id='d10'></td><td class='dbox' id='d11'></td><td class='dbox' id='d12'></td><td class='dbox' id='d13'></td><td class='dbox' id='d14'></td>
+	</tr>
+	<tr class='daterow' id='row1'>
+		<td class='dbox' id='d15'></td><td class='dbox' id='d16'></td><td class='dbox' id='d17'></td><td class='dbox' id='d18'></td><td class='dbox' id='d19'></td><td class='dbox' id='d20'></td><td class='dbox' id='d21'></td>
+	</tr>
+	<tr class='daterow' id='row1'>
+		<td class='dbox' id='d22'></td><td class='dbox' id='d23'></td><td class='dbox' id='d24'></td><td class='dbox' id='d25'></td><td class='dbox' id='d26'></td><td class='dbox' id='d27'></td><td class='dbox' id='d28'></td>
+	</tr>
+	<tr class='daterow' id='row1'>
+		<td class='dbox' id='d29'></td><td class='dbox' id='d30'></td><td class='dbox' id='d31'></td><td class='dbox' id='d32'></td><td class='dbox' id='d33'></td><td class='dbox' id='d34'></td><td class='dbox' id='d35'></td>
+	</tr>
+	<tr class='daterow' id='row1'>
+		<td class='dbox' id='d36'></td><td class='dbox' id='d37'></td><td class='dbox' id='d38'></td><td class='dbox' id='d39'></td><td class='dbox' id='d40'></td><td class='dbox' id='d41'></td><td class='dbox' id='d42'></td>
+	</tr>
+</table>
+<div id='testdiv'></div>
+</body>
+</html>
