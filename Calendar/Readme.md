@@ -1,4 +1,4 @@
-#calendar utilizing [minimalist-web-notepad](https://github.com/pereorga/minimalist-web-notepad).
+calendar utilizing [minimalist-web-notepad](https://github.com/pereorga/minimalist-web-notepad).
 
 1. Copy 'calendar.html' to /var/www/html
    > 396218 -rw-r--r-- 1 root     root     8125 Jul 10 19:46 calendar.html
