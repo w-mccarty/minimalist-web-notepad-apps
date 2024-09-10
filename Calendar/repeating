@@ -1,0 +1,3 @@
+#formatting=startweek,week interval,date or day of week,event title
+0,0,20,This event repeats on the 20th of every month
+2,2,6,This event starts week 2, repeats ever two weeks, on saturday
