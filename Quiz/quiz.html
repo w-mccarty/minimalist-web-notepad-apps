@@ -8,7 +8,7 @@ var bookURL = URL + 'quiz'
 var imgURL = 'noteIMG/'
 var AnswerCount = 6; //AT LEAST 4...
 $(document).ready(function() {
-	$.get(bookURL, function(data) { //load list of quizes from 'note/quiz'
+	$.get(bookURL, function(data) { //load list of quizes from quiz book "bookURL"
 		data = data.split("#");
 		var bookContents = data[1].split("\n");
 		for (c = 1; c < (bookContents.length-1); c++) {
