@@ -8,7 +8,7 @@ var bookURL = URL + 'quiz'
 var imgURL = 'noteIMG/'
 var AnswerCount = 6; //AT LEAST 4...
 $(document).ready(function() {
-	$.get(bookURL, function(data) { //load list of quizes from quiz book "bookURL"
+	$.get(bookURL, function(data) { //load list of quizes from 'note/quiz'
 		data = data.split("#");
 		var bookContents = data[1].split("\n");
 		for (c = 1; c < (bookContents.length-1); c++) {
@@ -26,16 +26,35 @@ $(document).ready(function() {
 				$("#DivQuizLink a").attr('href',(URL + bookActiveLink));
 				data = data.split("#");
 				var quizContents = data[1].split("\n");
+				var calert = 'WARNING: \n'; //check csv for incorrect commas that break quiz 
+				for (a = 1; a < (quizContents.length - 1); a++) { 
+					var checkr = quizContents[a].slice(0,1);
+					var checkr1 = quizContents[a].split(",").length;
+					var chkmsg = "line: " + a + " incorrect lenght: " + checkr1 + "\n"
+					switch (checkr) {
+						case '$' :
+							if (checkr1 != 4) { calert = (calert + chkmsg); }
+							break;
+						case '!' :
+							if (checkr1 != 2) { calert = (calert + chkmsg); }
+							break;
+						default :
+							if ( ( checkr1 != 2 ) && ( checkr1 != 4 ) ) { calert = (calert + chkmsg); }
+							break;
+					}
+				}
+				if (calert.length != 10) { alert(calert); }
 				for (c = 1; c < (quizContents.length-1); c++) { 
 					quizContents[c] = quizContents[c].split(",");
 				}
 				var quizContentsLen = (quizContents.length - 2);
 				var used = [];
+				var incorrect = [];
 				function shuffle() { //get questions + answers and append, repeat each time an answer is clicked
 					$('.allQuizDivs').empty();	
 					var answerARR = [];
 					answerARR.length = 0;
-					//PICK RANDOM QUESTION + SHUFFLE ANSWERS
+					//SHUFFLE QUESTIONS + PICK + SHUFFLE ANSWERS
 					do {
 						function randomInt(min, max){ return Math.floor(Math.random() * (max - min + 1) + min); }
 						var answerARRlen = answerARR.length;
@@ -43,23 +62,40 @@ $(document).ready(function() {
 							case 0 : // if loading new question
 								if (used.length == quizContentsLen) {  // if all questions have been used reset quiz
 									used.length = 0;
-									alert('end of questions... restarting.');
+									AnswerCount = -2;
+									$("#DivQuizQuestions").append('<div class="">Questions answered incorrectly:<\div><br><br>');
+									for (p = 0; p < incorrect.length; p++) {
+										$("#DivQuizQuestions").append('<div class="div20">' + quizContents[(incorrect[p])][0] + '<\div>');
+										$("#DivQuizQuestions").append('<div class="div70">' + quizContents[(incorrect[p])][1]  + '<\div>');
+										$("#DivQuizQuestions").append('<br>');
+									}
+									//alert('end of questions... restarting.');
 								} else { //pick random question
 									var rInt = randomInt(1,quizContentsLen); 
 									if ($.inArray(rInt.toString(), used) == -1) { // if question has not been used
 										answerARR.push(rInt);
 										used.push(rInt.toString());
+										incorrect.push(rInt);
 									}
 								}
 								break;
 							case 1 : //determine quiz type and append to answerARR[1]
+								$("#DivQuestionNum").empty().append(quizContents[(answerARR[0])][0]);
 								var qtypevar = (quizContents[(answerARR[0])][0]).slice(0,1);
 								if (qtypevar == "!") { // true false
 									answerARR.push("10000");
+									$("#DivCounterQtypevar").empty().append("10000");
 								} else if (qtypevar == "$") { // image number match range
 									answerARR.push("11000");
+									$("#DivCounterQtypevar").empty().append("11000");
 								} else { //multiple choice
-									answerARR.push("12000");
+									if (quizContents[answerARR].length < 3) {
+										answerARR.push("12000");
+										$("#DivCounterQtypevar").empty().append("12000");
+									} else {
+										answerARR.push("12500");
+										$("#DivCounterQtypevar").empty().append("12500");
+									}
 								}
 								break;
 							default:
@@ -79,14 +115,36 @@ $(document).ready(function() {
 										break;
 									case '11000' : //find range from (quizContents[(answerARR[0])][2]) from 1 - X
 										var range = parseInt(quizContents[(answerARR[0])][3]);
+										var answ0 = parseInt(quizContents[(answerARR[0])][2]);
 										if (range < AnswerCount) { range = AnswerCount; }
 										var rInt = (Math.floor(Math.random()*range)+1);
 										if ($.inArray(rInt, answerARR) == -1) { // if answer has not been used yet
-											answerARR.push(rInt);
+											if (rInt != answ0) {
+												answerARR.push(rInt);
+											}
 										}
 										break;
 									case '12000' :
-										var rInt = randomInt(1,quizContentsLen);
+										var rMin = 1;
+										var rMax = quizContentsLen;
+										var rInt = randomInt(rMin,rMax);
+										var rIntprep = (quizContents[rInt][0]).slice(0,1);
+										if (rIntprep != "!" && rIntprep != "$") { //if question is not a non-MC question
+											if ($.inArray(rInt, answerARR) == -1) { // if answer has not been used yet
+												answerARR.push(rInt);
+											}
+										}
+										break;
+									case '12500':
+										var rMin = parseInt(quizContents[(answerARR[0])][2]);
+										var rMax = parseInt(quizContents[(answerARR[0])][3]);
+										var rDif  = rMax - rMin;
+										if ((answerARR.length -2) >= rDif) {
+											var rMin = 1;
+											var rMax = quizContentsLen;
+										}
+										var rInt = randomInt(rMin,rMax);
+										//alert(rMin + "-" + rMax + "-" + rDif + "_" + rInt);
 										var rIntprep = (quizContents[rInt][0]).slice(0,1);
 										if (rIntprep != "!" && rIntprep != "$") { //if question is not a non-MC question
 											if ($.inArray(rInt, answerARR) == -1) { // if answer has not been used yet
@@ -97,7 +155,7 @@ $(document).ready(function() {
 								}
 						}
 					} while (answerARR.length < (AnswerCount + 1));
-					//SET HTML QUESTION TITLE
+					//SET QUESTION TITLE
 					var prepAnswer = (quizContents[(answerARR[0])][0]).slice(0,1);
 					switch (prepAnswer) {
 						case '!' : //TrueFalse
@@ -111,7 +169,7 @@ $(document).ready(function() {
 						case '$' : //Range 1-X
 							var fixedAnswer = (quizContents[(answerARR[0])][0]).substring(1);
 							if (fixedAnswer.slice(0,1) == "/") {
-								$("#DivQuizTitle").append('<img class="qimg" src="' + imgURL + bookActiveLink + fixedAnswer + '"<br><b>' + (quizContents[(answerARR[0])][1]) + '</b>'); 
+								$("#DivQuizTitle").append('<img class="qimg" src="' + imgURL + bookActiveLink + fixedAnswer + '"<br><br><b>' + (quizContents[(answerARR[0])][1]) + '</b>'); 
 							} else {
 								$("#DivQuizTitle").append("<b>" + fixedAnswer + "<br>" + (quizContents[(answerARR[0])][1]) + "</b>"); 
 							}
@@ -124,7 +182,7 @@ $(document).ready(function() {
 								$("#DivQuizTitle").append("<b>" + fixedAnswer + "</b>"); 
 							}
 					}
-					//SET HTML QUESTION ANSWERS
+					//SET QUESTION ANSWERS
 					let shuffled = answerARR
 						.map(value => ({ value, sort: Math.random() }))
 						.sort((a, b) => a.sort - b.sort)
@@ -165,6 +223,16 @@ $(document).ready(function() {
 								}
 							}
 							break;
+						case '12500' : //MultipleChoice
+							shuffled.splice($.inArray("12500", shuffled), 1);
+							for (i = 0; i < AnswerCount; i++) {
+								if (shuffled[i] == answerARR[0]) {
+									$("#DivQuizQuestions").append('<div class="right box">' + inum[i] + " " + quizContents[(shuffled[i])][1] + "<\div>");
+								} else {
+									$("#DivQuizQuestions").append('<div class="wrong box">' + inum[i] + " " + quizContents[(shuffled[i])][1] + "<\div>");
+								}
+							}
+							break;
 					}
 					//INTERACTION
 					$('.box').click(function() { //click answer
@@ -175,6 +243,7 @@ $(document).ready(function() {
 							$('.wrong').addClass('answerItem').removeClass('wrong')
 							$("#DivCounterCorrect").empty().append(cor + 1);
 							$("#DivCounterOutput").empty().append((cor + 1) + "/" + (wro + cor + 1) + " correct out of " + quizContentsLen + " questions.");
+							incorrect.pop();
 							window.setTimeout( shuffle, 2500); 
 			       		} else if ($(this).hasClass("wrong")) {
 							$(this).addClass('wrongA').removeClass('wrong');
@@ -187,16 +256,16 @@ $(document).ready(function() {
 						} else {
 						}
 					});
-					$("#SelectBookContents").change(function() {
-						var bookActive = $(this).val().split(",");
-						LOADquiz(bookActive[0], bookActive[1]);
-					});
 				}
 				shuffle();
 			});
 		}
 		var bookActive = $("#SelectBookContents").val().split(",");
 		LOADquiz(bookActive[0], bookActive[1]);
+		$("#SelectBookContents").change(function() {
+			var bookActive = $(this).val().split(",");
+			LOADquiz(bookActive[0], bookActive[1]);
+		});
 	});
 });
 </script>
@@ -212,6 +281,8 @@ $(document).ready(function() {
 	#DivQuizTitle {float;left; margin:10px; max-height:40vh;}
 		.qimg {height:40vh;}
 	#DivCounterOutput {float:left; margin:10px;}
+	.div20 {float:left; margin:10px; margin-top:5px; margin-bottom:5px; width:20vw; }
+	.div70 {float:left; margin:10px; margin-top:5px; margin-bottom:5px; width:70vw; }
 </style>
 </head>
 <body>
@@ -223,6 +294,8 @@ $(document).ready(function() {
 	<div id="DivCounterOutput" class="t">0/0</div>
         <div id="DivCounterCorrect" class="l hidden">0</div>
         <div id="DivCounterIncorrect" class="w hidden">0</div>
+	<div id="DivCounterQtypevar" class="hidden">0</div>
+	<div id="DivQuestionNum" class="hidden">0</div>
 	<br><br><br>
 	<div id="DivQuizTitle" class="title allQuizDivs"></div>
 	<br>
