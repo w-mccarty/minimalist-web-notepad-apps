@@ -1,0 +1,32 @@
+<html>
+<!--
+  3 note items to potentially load
+    1. 000000 - placeholder if script is broken
+    2. todays date - automatically creates file if none exits
+    3. previous date - load previous diary entry (optional)
+  be sure to update IP address of note to load (change all IPs below)
+-->
+<head>
+<script>
+$(document).ready(function() {
+  var fr6date = new Date();
+	var fr6year = fr6date.getFullYear().toString().substr(-2);
+	var strfr6Date = fr6year + (fr6date.getMonth()+1).toString() + (fr6date.getDate()).toString();
+	if ((fr6date.getDate()-1) < 1) {
+		var strfr7Date= fr6year + (fr6date.getMonth()+1).toString() + (fr6date.getDate()-1).toString();
+	}
+	var yDate = new Date(new Date().setDate(new Date().getDate()-1));
+	var yesterday = yDate.getFullYear().toString().slice(-2) + '' + (yDate.getMonth()+1) + '' + yDate.getDate();
+	var strfr7Date= fr6year + (fr6date.getMonth()+1).toString() + (fr6date.getDate()-1).toString();
+	$("#fr6").attr('src', ("http://192.168.103.3/" + strfr6Date));
+  $("#fr7").attr('src', ("http://192.168.103.3/" + yesterday));
+});
+</script>
+</head>
+<body>
+
+<iframe id="fr6" src="http://192.168.103.3/00000" scrolling="no" frameBorder="0"></iframe>
+<iframe id="fr7" src="http://192.168.103.3/00000" scrolling="no" frameBorder="0"></iframe>
+
+</body>
+</html>
